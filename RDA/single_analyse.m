@@ -30,7 +30,7 @@ nc = (loc_a-loc_r*tan(theta_rc))/Vr;            % 所有目标的波束中心穿
 
 % 分辨率参数
 rho_a = 1;     % 方位向分辨率
-rho_r = 5;     % 距离向分辨率
+rho_r = 1;     % 距离向分辨率
 
 % 其他参数定义
 alpha = 0.886;                    % 1或0.886
@@ -76,10 +76,10 @@ for i=1:obj_a_num
     % 距离向脉冲包络
     wr = abs(t_r-2*Rn/c)<Tr/2;                        
     % 方位向矩形方向图
-    %wa = abs(t_a-nc(i,j))<Ts_diff/2;                       % 方位向方向图
+    wa = abs(t_a-nc(i,j))<Ts_diff/2;                       % 方位向方向图
     % 方位向sinc方向图
-    theta = atan(Vr*(t_a-nc(i,j))/R_nc);              % 斜距平面内目标与雷达视线的夹角
-    wa = sinc(alpha*theta/theta_bw).^2;                % 双程sinc方向图
+%     theta = atan(Vr*(t_a-nc(i,j))/R_nc);              % 斜距平面内目标与雷达视线的夹角
+%     wa = sinc(alpha*theta/theta_bw).^2;                % 双程sinc方向图
     A0 = 1;     % 统一反射系数为1
     
     % 构建对应目标的原始基带信号回波
@@ -106,19 +106,43 @@ la_sc = [ta(1), ta(end)]*Vr;
 
 % 以采样点为尺度绘制二维时域
 figure(1);
-% subplot(1,2,1);
-% imagesc(abs(s0_tn));
-% subplot(1,2,2);
+imagesc(abs(s0_tn));
+xlabel('距离向(采样点)'), ylabel('方位向(采样点)')
+figure()
+mesh(abs(s0_tn)),xlabel('距离向(采样点)'), ylabel('方位向(采样点)')
+
+figure()
 imagesc(angle(s0_tn));
 
-xlabel('距离向(采样点)'), ylabel('方位向(采样点)'), title('回波信号的二维时域');
+
+xlabel('距离向(采样点)'), ylabel('方位向(采样点)')
 
 %% 未压缩前的距离多普勒
 Srd_uncompressed = fftshift(fft(s0_tn,[],1),1);
-imagesc(angle(Srd_uncompressed));
+
 
 S2df_uncompressed = fftshift(fft(Srd_uncompressed,[],2),2);
 %imagesc(angle(S2df_uncompressed));
+figure();
+imagesc(abs(Srd_uncompressed));
+xlabel('距离向(采样点)'), ylabel('方位频率(采样点)')
+figure();
+mesh(abs(Srd_uncompressed));
+xlabel('距离向(采样点)'), ylabel('方位频率(采样点)')
+figure()
+imagesc(angle(Srd_uncompressed));
+xlabel('距离向(采样点)'), ylabel('方位频率(采样点)')
+
+figure();
+mesh(abs(S2df_uncompressed));
+xlabel('距离频率(采样点)'), ylabel('方位频率(采样点)')
+figure()
+imagesc(angle(S2df_uncompressed));
+xlabel('距离频率(采样点)'), ylabel('方位频率(采样点)')
+
+%imagesc(angle(S2df_uncompressed));
+
+
 
 %% 距离向脉冲压缩
 % 复制脉冲
