@@ -105,10 +105,30 @@ la_sc = [ta(1), ta(end)]*Vr;
 % % colormap(summer), colorbar, shading flat;
 
 % 以采样点为尺度绘制二维时域
+s0_tn_abs = abs(s0_tn);
 figure(1);
-imagesc(abs(s0_tn));
+imagesc(s0_tn_abs);
+colormap("jet")
+xlabel('距离向(采样点)'), ylabel('方位向(采样点)')
+figure()
+mesh(s0_tn_abs); axis tight
+xlabel('距离向(采样点)'), ylabel('方位向(采样点)')
+[val,rLoc] = max(s0_tn_abs);
+[~, cLoc] = max(val);
+figure()
+plot(real(s0_tn(:, cLoc)));
+plot(s0_tn_abs(rLoc(cLoc), :));
+%imagesc(angle(s0_tn));
 %mesh(abs(s0_tn));
-xlabel('距离向(采样点)'), ylabel('方位向(采样点)'), title('回波信号的二维时域');
+xlabel('距离向(采样点)'), ylabel('方位向(采样点)')
+
+%% 未压缩前的距离多普勒
+figure
+mesh(abs(fftshift(fft(s0_tn, [], 1), 1)));
+colormap(turbo)
+xlabel('距离向(采样点)'), ylabel('方位频率(采样点)')
+axis tight
+
 
 %% 距离向脉冲压缩
 % 复制脉冲
@@ -134,7 +154,13 @@ figure();
 %surf(t_r*c/2-R0, t_a*Vr, abs(sr_expressed));
 %imagesc(lr_sc, la_sc, abs(sr_compress));
 imagesc(abs(sr_compress));
-xlabel('距离向(相对场景中心)/m'), ylabel('方位向/m'), title('二维时域距离向脉冲压缩(距离单位)');
+colormap(turbo(64))
+figure();
+mesh(flipud(abs(sr_compress)));
+axis tight
+
+xlabel('距离向(采样点)'), ylabel('方位(采样点)')
+
 colormap(turbo)
 %axis([-400, 400, -75,75]);
 
@@ -148,9 +174,11 @@ f_Sd = 0:Fa/Na:Fa/2;
 f_Sd = fnc + [fliplr(-f_Sd(2:end)) f_Sd];       
 
 figure();
-imagesc(lr_sc, [f_Sd(1) f_Sd(end)], abs(Sd));
-title('距离多普勒域'), xlabel('距离向(相对场景中心)/m'), ylabel('多普勒频率/Hz')
-colormap(turbo)
+%imagesc(lr_sc, [f_Sd(1) f_Sd(end)], abs(Sd));
+%title('距离多普勒域'), xlabel('距离向(相对场景中心)/m'), ylabel('多普勒频率/Hz')
+mesh(abs(Sd))
+xlabel('距离向(采样点)'), ylabel('方位频率(采样点)')
+colormap(turbo), axis tight
 
 %% 距离徙动校正（插值法）
 Rr = tr*(c/2);      % 每个距离门的对应距离
@@ -215,7 +243,8 @@ figure();
 imagesc(lr_sc, la_sc, abs(sra_full_compress_RCMC));
 %mesh(abs(sa_expressed))
 axis([-400, 400, -75,75]);
-xlabel('距离向(相对场景中心)/m'), ylabel('方位向/m'), title('二维脉冲压缩结果(距离单位)');
+xlabel('距离向(相对场景中心)/m'), ylabel('方位向/m')
+% title('二维脉冲压缩结果(距离单位)');
 colormap(turbo);
 
 %% 二维频谱（最终之路！）
