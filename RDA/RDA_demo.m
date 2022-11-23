@@ -49,18 +49,18 @@ Kr = c*alpha/(2*Tr*rho_r);                      % 距离向调频斜率
 Ka = 2*Vr^2*cos(theta_rc)^2/lambda/R_nc;        % 方位向调频斜率
 Fr = alpha_osr*Kr*Tr;                           % 距离向采样频率
 Fa = alpha_osa*f_dop;                           % 方位向采样频率
-%Fc = 6.8e8;                       
-%Fr = Fc;
+
+Fss = 6.8e8;             % 接受原始回波时的距离向带通采样率
 
 %% 生成区域回波信号
 % 二维时间样点
 tr = 2*(R0-range/2)/c-Tr/2:1/Fr:2*(R0+range/2)/c+Tr/2;   % 距离向时间
+%tr = 2*(R0-range/2)/c-Tr/2:1/Fss:2*(R0+range/2)/c+Tr/2;  % 距离向时间
 %ta = -azimuth/2/Vr-Ta:1/Fa:azimuth/2/Vr+Ta;             % 方位向时间
 ta = 0:1/Fa:azimuth/2/Vr+Ta;
 ta = [fliplr(-ta(2:end)) ta];                            % 方位向时间对准时间零点(考虑到方位向采样率低的影响)
-%ta = fliplr(ta);      % 时间轴调转匹配频域变换得顺序
-% lr = tr*c/2;        % 距离向距离
-% la = ta*Vr;         % 方位向距离
+
+
 Nr = length(tr); Na = length(ta);     % 距离向方位向采样点数
 [t_r, t_a] = meshgrid(tr, ta);        % 距离向和方位向时间2D网格
 
@@ -86,13 +86,24 @@ for i=1:obj_a_num
     s0_ij = A0*wr.*wa.*exp(-1j*4*pi*f0*Rn/c).*exp(1j*pi*Kr*(t_r-2*Rn/c).^2);
     
     % 载波调制的回波信号
-    %s0_ij = A0*wr.*wa.*exp(1j*2*pi*f0*(t_r-2*Rn/c)).*exp(1j*pi*Kr*(t_r-2*Rn/c).^2);
-    
+    %s0_ij = A0*wr.*wa.*cos(2*pi*f0*(t_r-2*Rn/c)).*cos(pi*Kr*(t_r-2*Rn/c).^2);
+
     s0_tn = s0_tn + s0_ij;
   end
 end
 
-%s0_tn = s0_tn.*exp(-1j*2*pi*f0*(t_r));        % 复数域正交解调
+% 正交解调--〉自定义函数quadratureDemodulation()
+% s0_temp = [];
+% for i = 1:Na
+%   s0_demodulation = quadratureDemodulation(s0_tn(i,:), tr, f0, Fss, Fr);
+%   s0_temp = [s0_temp; s0_demodulation];
+% end
+% s0_tn = s0_temp;
+% % 重新调整时间样点
+% tr = linspace(2*(R0-range/2)/c-Tr/2, 2*(R0+range/2)/c+Tr/2, size(s0_tn, 2));
+% Nr = size(s0_tn, 2);
+
+
 
 % 以距离为尺度绘制二维时域
 lr_sc = [tr(1), tr(end)]*c/2-R0;
@@ -108,25 +119,36 @@ la_sc = [ta(1), ta(end)]*Vr;
 s0_tn_abs = abs(s0_tn);
 figure(1);
 imagesc(s0_tn_abs);
-colormap("jet")
+colormap(jet)
 xlabel('距离向(采样点)'), ylabel('方位向(采样点)')
-figure()
-mesh(s0_tn_abs); axis tight
-xlabel('距离向(采样点)'), ylabel('方位向(采样点)')
-[val,rLoc] = max(s0_tn_abs);
-[~, cLoc] = max(val);
-figure()
-plot(real(s0_tn(:, cLoc)));
-plot(s0_tn_abs(rLoc(cLoc), :));
+title('基带回波')
+% figure()
+% mesh(s0_tn_abs); axis tight
+% xlabel('距离向(采样点)'), ylabel('方位向(采样点)')
+% [val,rLoc] = max(s0_tn_abs);
+% [~, cLoc] = max(val);
+% figure()
+% plot(s0_tn_abs(rLoc(cLoc), :));
 %imagesc(angle(s0_tn));
 %mesh(abs(s0_tn));
-xlabel('距离向(采样点)'), ylabel('方位向(采样点)')
+% xlabel('距离向(采样点)'), ylabel('方位向(采样点)')
 
 %% 未压缩前的距离多普勒
 figure
-mesh(abs(fftshift(fft(s0_tn, [], 1), 1)));
+Srd_uncompress = fftshift(fft(s0_tn, [], 1), 1);
+imagesc(abs(Srd_uncompress));
 colormap(turbo)
 xlabel('距离向(采样点)'), ylabel('方位频率(采样点)')
+title('未压缩RD域')
+axis tight
+
+%% 未压缩前的二维频谱
+figure
+Sdf_uncompress = fftshift(fft(Srd_uncompress, [], 2), 2);
+imagesc(abs(Sdf_uncompress));
+colormap(turbo)
+xlabel('距离向频率(采样点)'), ylabel('方位频率(采样点)')
+title('未压缩二维频谱')
 axis tight
 
 
@@ -155,11 +177,12 @@ figure();
 %imagesc(lr_sc, la_sc, abs(sr_compress));
 imagesc(abs(sr_compress));
 colormap(turbo(64))
-figure();
-mesh(flipud(abs(sr_compress)));
-axis tight
+% figure();
+% mesh(abs(sr_compress));
+% axis tight
 
 xlabel('距离向(采样点)'), ylabel('方位(采样点)')
+title('距离压缩后二维时域')
 
 colormap(turbo)
 %axis([-400, 400, -75,75]);
@@ -176,8 +199,10 @@ f_Sd = fnc + [fliplr(-f_Sd(2:end)) f_Sd];
 figure();
 %imagesc(lr_sc, [f_Sd(1) f_Sd(end)], abs(Sd));
 %title('距离多普勒域'), xlabel('距离向(相对场景中心)/m'), ylabel('多普勒频率/Hz')
-mesh(abs(Sd))
+imagesc(abs(Sd))
+%mesh(abs(Sd))
 xlabel('距离向(采样点)'), ylabel('方位频率(采样点)')
+title('距离压缩后RD域')
 colormap(turbo), axis tight
 
 %% 距离徙动校正（插值法）
@@ -244,6 +269,7 @@ imagesc(lr_sc, la_sc, abs(sra_full_compress_RCMC));
 %mesh(abs(sa_expressed))
 axis([-400, 400, -75,75]);
 xlabel('距离向(相对场景中心)/m'), ylabel('方位向/m')
+title('二维压缩后时域')
 % title('二维脉冲压缩结果(距离单位)');
 colormap(turbo);
 
@@ -254,18 +280,6 @@ S_full_compress_RCMC = fftshift(S_full_compress_RCMC, 1);
 
 figure();
 imagesc(abs(S_full_compress_RCMC));
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+xlabel('距离向频率(采样点)'), ylabel('方位频率(采样点)')
+title('二维压缩后二维频域')
 
