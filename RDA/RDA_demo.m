@@ -172,6 +172,13 @@ Sr_mul = Sr_extend .* repmat(conj(Sr_chirp),Na,1);  % 频域脉冲压缩
 sr_compress = ifft(Sr_mul, [], 2);                 % 逆变换得距离压缩后回波的二维时域
 sr_compress = sr_compress(:, 1:Nr);               % 舍去弃置区
 
+[v, loc1] = max(abs(sr_compress));
+[~, loc2] = max(v);
+row = loc1(loc2);
+
+figure();
+baseAnalyse(sr_compress(row,:), Fr, 100);
+
 figure();
 %surf(t_r*c/2-R0, t_a*Vr, abs(sr_expressed));
 %imagesc(lr_sc, la_sc, abs(sr_compress));
@@ -272,6 +279,12 @@ xlabel('距离向(相对场景中心)/m'), ylabel('方位向/m')
 title('二维压缩后时域')
 % title('二维脉冲压缩结果(距离单位)');
 colormap(turbo);
+
+% [v, loc1] = max(abs(sra_full_compress_RCMC));
+% [~, loc2] = max(v);
+% row = loc1(loc2);
+% figure();
+% baseAnalyse(sra_full_compress_RCMC(:,loc2), Fr, 100, 32);
 
 %% 二维频谱（最终之路！）
 S_full_compress_RCMC = fft(Sd_full_compress_RCMC, [], 2);   % 距离向fft
