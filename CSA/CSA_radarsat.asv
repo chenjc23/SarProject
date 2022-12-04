@@ -7,13 +7,13 @@ clear, clc, close all;
 %% 数据导入
 load CDdata1.mat data;
 load CD_run_params.mat ...
-  Fr Kr PRF R0 Tr c f0 Nrg_cells Nrg_lines_blk first_rg_cell first_rg_line;         % 成像处理相关的参数
+  Fr Kr PRF R0 Tr c f0 Nrg_cells Nrg_lines_blk;         % 成像处理相关的参数
 
 Nr = Nrg_cells;                 % 距离门数目
 Na = Nrg_lines_blk;             % 距离线数目
 
 %% 原始数据补零
-s_ra = zeros(2*Na, 2*Nr);       % 方位维和距离维频域近似两倍的插值
+s_ra = zeros(2048, 3000);       % 方位维和距离维频域近似两倍的插值
 s_ra(1:Na, 1:Nr) = data;
 s_ra = double(s_ra);            % 转换成浮点数处理
 
@@ -38,8 +38,8 @@ tr = 2*R0/c + (-Nfft_r/2:Nfft_r/2-1)/Fr;          % 距离时间轴
 ta = (-Nfft_a/2:Nfft_a/2-1)/Fa;                   % 方位时间轴
 
 %  频率轴定义
-fr = fftshift(-Nfft_r/2:Nfft_r/2-1)*Fr/Nfft_r;            % 距离频率轴
-fa = fftshift(-Nfft_a/2:Nfft_a/2-1)*Fa/Nfft_a;     % 方位频率轴
+fr = (-Nfft_r/2:Nfft_r/2-1)*Fr/Nfft_r;            % 距离频率轴
+fa = fn_c + (-Nfft_a/2:Nfft_a/2-1)*Fa/Nfft_a;     % 方位频率轴
  
 
 
@@ -92,7 +92,7 @@ s_RCMC_com = exp(1j*4*pi/c*(1./D_rd_m-1./D_rd_ref)*R_ref.*fr_m);
 
 %%%% 统一进行补偿，补偿器需fftshift至零频在两端 %%%%
 S_df = fft(S_rd_sc, [], 2);                                 % rd域距离向fft至二维频谱
-S_df_2 = S_df .* s_r_com.*s_RCMC_com;          % 一次二次脉压+一致RCMC，完成所有距离处理
+S_df_2 = S_df .* fftshift(s_r_com.*s_RCMC_com, 2);          % 一次二次脉压+一致RCMC，完成所有距离处理
 
 figure();
 imagesc(abs(S_df_2));
@@ -128,7 +128,7 @@ imagesc(abs(s_ra_final));
 s_enhance = 20*log10(abs(s_ra_final)/max(max(abs(s_ra_final)))+eps);
 
 figure();
-imagesc(s_enhance, [-55, 0]);
+imagesc(s_enhance, [-80, 0]);
 
 %% 图像调整
 % 1. 由于距离方位耦合，距离脉压后脉冲被压缩至2R0/D(fn_ref, Vr_ref)/c处 %
@@ -139,8 +139,7 @@ s_shift = circshift(s_enhance, del_tr, 2);            % 循环左移
 
 figure();
 imagesc(s_shift, [-55, 0]);
-
-
+axis xy
 
 
 
